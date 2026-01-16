@@ -1,17 +1,17 @@
 # --- 變數定義 ---
 HELM_BIN    := helm
 KUBECTL_BIN := kubectl
-APP         ?= ingress-nginx
+APP         ?= dify
 
 # --- 路徑解析 ---
 APP_DIR     := ./apps/$(APP)
 # 判斷是 Helm 還是純 Kustomize (檢查是否有 values-override.yaml)
 IS_HELM     := $(shell [ -f $(APP_DIR)/values-override.yaml ] && echo "yes" || echo "no")
 
-ifeq ($(APP),ingress-nginx)
-    CHART_DIR := ./charts/ingress-nginx/charts/ingress-nginx
-else
-    CHART_DIR := ./charts/$(APP)
+CHART_DIR := ./charts/$(APP)
+
+ifneq ("$(wildcard $(CHART_DIR)/charts/$(APP)/Chart.yaml)","")
+    CHART_DIR := $(CHART_DIR)/charts/$(APP)
 endif
 
 OUTPUT_FILE := $(APP_DIR)/base-rendered.yaml
@@ -43,7 +43,6 @@ apply: ns template ## 部署服務
 	@echo "=> Applying [\033[32m$(APP)\033[0m]..."
 	$(KUBECTL_BIN) apply -k $(APP_DIR)
 
-# 在 Makefile 中加入這個 target
 destroy: ## 徹底移除部署的資源 (APP=xxx)
 	@echo "=> Destroying [\033[31m$(APP)\033[0m] resources..."
 	$(KUBECTL_BIN) delete -k $(APP_DIR) --ignore-not-found
