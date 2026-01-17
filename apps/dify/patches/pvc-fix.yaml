@@ -1,0 +1,23 @@
+# 修正 plugin-daemon 的 PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dify-plugin-daemon
+  # 這裡不需要補 annotation，因為我們是用 kubectl apply -k 部署，
+  # 而非 helm install，所以不會有 ownership 衝突 。
+spec:
+  accessModes:
+    - ReadWriteOnce   # 強行改回 RWO，適配 local-path
+  storageClassName: "local-path" # 確保使用 k3s 內建 SC
+  volumeName: null    # 清除任何可能導致 Pending 的特定 PV 綁定
+
+---
+# 修正主程式 api 用的 PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dify
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path

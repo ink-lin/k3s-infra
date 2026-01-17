@@ -1,0 +1,17 @@
+# 告訴 Makefile 這是一個 Helm 應用
+pluginDaemon:
+  enabled: true
+# 其他組件的基礎設定...
+
+api:
+  enabled: true
+worker:
+  enabled: true
+web:
+  enabled: true
+nginx:
+  enabled: true  # 這會產生 Proxy 服務
+postgresql:
+  enabled: true
+redis:
+  enabled: true
