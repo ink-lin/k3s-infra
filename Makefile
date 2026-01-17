@@ -29,6 +29,12 @@ ns: ## 確保 Namespace 存在
 
 template: ## 產出 Helm Template (僅限 Helm App)
 	@if [ "$(IS_HELM)" = "yes" ]; then \
+		if [ -f "$(CHART_DIR)/Chart.yaml" ]; then \
+			if [ ! -d "$(CHART_DIR)/charts" ] || [ -z "$$(ls -A $(CHART_DIR)/charts 2>/dev/null)" ]; then \
+				echo "=> Dependencies missing or empty in $(CHART_DIR), running \033[33mhelm dependency build\033[0m..."; \
+				$(HELM_BIN) dependency build $(CHART_DIR) || exit 1; \
+			fi; \
+		fi; \
 		echo "=> Rendering Helm template for [\033[32m$(APP)\033[0m]..."; \
 		$(HELM_BIN) template $(APP) $(CHART_DIR) --namespace $(NAMESPACE) -f $(VALUES_FILE) > $(OUTPUT_FILE); \
 	else \
