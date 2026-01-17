@@ -1,17 +1,79 @@
 # 告訴 Makefile 這是一個 Helm 應用
-pluginDaemon:
-  enabled: true
-# 其他組件的基礎設定...
 
+# --- 1. 核心鏡像版本 (確保縮排，解決 image 沒變的問題) ---
+image:
+  api:
+    tag: "1.11.4"
+  worker:
+    tag: "1.11.4"
+  web:
+    tag: "1.11.4"
+  sandbox:
+    tag: "1.11.4"
+  pluginDaemon:
+    tag: "1.11.4"
+
+# --- 2. API 組件：多模態與資源限制 ---
 api:
   enabled: true
+  extraEnv:
+    - name: STORAGE_TYPE
+      value: "local"
+    - name: STORAGE_LOCAL_PATH
+      value: "/app/api/storage"
+    - name: INTERNAL_FILES_URL
+      value: "http://dify-api:8080"
+    - name: FILES_URL
+      value: "http://dify-api:8080"
+    - name: MULTIMODAL_SEND_IMAGE_FORMAT
+      value: "url"
+    - name: ATTACHMENT_IMAGE_FILE_SIZE_LIMIT
+      value: "10"
+  resources:
+    limits:
+      cpu: "1"
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+# --- 3. Worker 組件：重型任務配置 ---
 worker:
   enabled: true
-web:
-  enabled: true
-nginx:
-  enabled: true  # 這會產生 Proxy 服務
+  extraEnv:
+    - name: STORAGE_TYPE
+      value: "local"
+    - name: STORAGE_LOCAL_PATH
+      value: "/app/api/storage"
+  resources:
+    limits:
+      cpu: 1500m
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+# --- 4. 基礎設施：固定所有密碼 (徹底消除跳動) ---
 postgresql:
   enabled: true
+  auth:
+    password: "difyai123456"
+    replicationPassword: "K814MY7G03"
+
+weaviate:
+  enabled: true
+  auth:
+    basicAuth:
+      username: "XM7t5aoUqGIoWwOchdFPVTBSiWphmWHB"
+      password: "9PRR1vbHw5kUh4QzLntWy75JhfMiBDay"
+
 redis:
+  enabled: true
+  auth:
+    password: "difyai123456"
+
+# 其他組件保持開啟
+nginx:
+  enabled: true
+pluginDaemon:
   enabled: true
