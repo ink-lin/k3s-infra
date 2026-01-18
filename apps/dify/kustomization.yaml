@@ -4,6 +4,8 @@ namespace: dify
 
 resources:
   - base-rendered.yaml  # 確保 "-" 後面有一個空白鍵 [cite: 1]
+  - secrets/redis-creds.sealed.yaml
+  - secrets/postgres-creds.sealed.yaml
 
 patches:
   - path: patches/pvc-fix.yaml

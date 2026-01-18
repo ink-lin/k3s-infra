@@ -58,8 +58,12 @@ worker:
 postgresql:
   enabled: true
   auth:
-    password: "difyai123456"
-    replicationPassword: "K814MY7G03"
+    existingSecret: "postgres-creds"
+    # password: "difyai123456"
+    # replicationPassword: "K814MY7G03"
+    secretKeys:
+      adminPasswordKey: "password"
+      replicationPasswordKey: "replicationPassword" # 需與您 seal 時的 --from-literal key 一致
 
 weaviate:
   enabled: true
@@ -71,7 +75,12 @@ weaviate:
 redis:
   enabled: true
   auth:
-    password: "difyai123456"
+    # password: "difyai123456"
+    # 1. 移除原本的 password: "xxx"
+    # 2. 指定已存在的 Secret 名稱
+    existingSecret: "redis-creds"
+    # 3. 指定該 Secret 內存放密碼的 Key 名稱 (預設通常就是 password)
+    existingSecretPasswordKey: "password"
 
 # 其他組件保持開啟
 nginx:

@@ -18,7 +18,7 @@ OUTPUT_FILE := $(APP_DIR)/base-rendered.yaml
 VALUES_FILE := $(APP_DIR)/values-override.yaml
 NAMESPACE   ?= $(APP)
 
-.PHONY: help template diff apply clean ns
+.PHONY: help template diff diff-copy apply destroy clean clean-all ns
 
 help: ## 顯示說明 (可指定 APP=name)
 	@echo "\033[33mUsage: make [target] APP=[app_name]\033[0m"
@@ -45,6 +45,11 @@ diff: ns template ## 預覽差異
 	@echo "=> Diffing [\033[32m$(APP)\033[0m]..."
 	$(KUBECTL_BIN) diff -k $(APP_DIR) || true
 
+diff-copy: ## 執行 diff 並使用 xclip 複製到剪貼簿
+	@echo "=> Running diff for [\033[32m$(APP)\033[0m] and copying via xclip..."
+	@$(MAKE) -s diff APP=$(APP) | xclip -selection clipboard
+	@echo "=> \033[32mDone!\033[0m Diff output is now in your X11 clipboard."
+
 apply: ns template ## 部署服務
 	@echo "=> Applying [\033[32m$(APP)\033[0m]..."
 	$(KUBECTL_BIN) apply -k $(APP_DIR)
@@ -60,3 +65,37 @@ clean-all: ## 清理所有 app 的產出 YAML
 	@for app in $$(ls ./apps); do \
 		$(MAKE) clean APP=$$app; \
 	done
+
+# --- Sealed Secrets 變數 ---
+SECRET_BKP_DIR     := ./secret-backups
+# 預設還原檔案名稱，也可以在執行時透過 SEALED_KEY=xxx 指定
+SEALED_KEY         ?= $(SECRET_BKP_DIR)/master-key.yaml
+SEALED_NS          := kube-system
+
+.PHONY: seal-secret backup-secrets restore-secrets
+
+seal-secret: ## 互動式加密多個 Key-Value
+	@read -p "Enter Secret Name (e.g., postgres-creds 登入賬密等, gemini-secret 金鑰憑證等): " NAME; \
+	read -p "Enter Key-Value pairs (e.g., --from-literal=user=admin --from-literal=pass=123): " PAIRS; \
+	mkdir -p $(APP_DIR)/secrets; \
+	$(KUBECTL_BIN) create secret generic $$NAME $$PAIRS -n $(NAMESPACE) --dry-run=client -o yaml | \
+	kubeseal --format yaml > $(APP_DIR)/secrets/$$NAME.sealed.yaml
+	@echo "=> \033[32mCreated $$NAME.sealed.yaml with multiple keys\033[0m"
+
+backup-secrets: ## [Security] 備份 Sealed Secrets 私鑰到本地 (請務必妥善保管此檔案)
+	@mkdir -p $(SECRET_BKP_DIR)
+	@echo "=> Exporting Sealed Secrets Master Key from namespace [\033[32m$(SEALED_NS)\033[0m]..."
+	@$(KUBECTL_BIN) get secret -n $(SEALED_NS) -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > $(SEALED_KEY)
+	@echo "=> \033[32mBackup completed\033[0m: $(SEALED_KEY)"
+	@echo "\033[33m[WARNING] DO NOT commit this file to Git! Add it to .gitignore.\033[0m"
+
+restore-secrets: ## [Security] 從備份檔案還原 Sealed Secrets 私鑰
+	@if [ ! -f "$(SEALED_KEY)" ]; then \
+		echo "\033[31mError: Backup file $(SEALED_KEY) not found!\033[0m"; \
+		exit 1; \
+	fi
+	@echo "=> Preparing namespace [\033[32m$(SEALED_NS)\033[0m]..."
+	@$(KUBECTL_BIN) create namespace $(SEALED_NS) --dry-run=client -o yaml | $(KUBECTL_BIN) apply -f -
+	@echo "=> Restoring Master Key from $(SEALED_KEY)..."
+	@$(KUBECTL_BIN) apply -f $(SEALED_KEY)
+	@echo "=> \033[32mRestoration successful.\033[0m Please install/restart Sealed Secrets Controller now."
