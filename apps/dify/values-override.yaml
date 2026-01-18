@@ -1,6 +1,7 @@
 # 告訴 Makefile 這是一個 Helm 應用
 
 # --- 1. 核心鏡像版本 (確保縮排，解決 image 沒變的問題) ---
+# Follow tags in https://github.com/langgenius/dify/blob/1.11.4/docker/docker-compose.yaml
 image:
   api:
     tag: "1.11.4"
@@ -9,9 +10,9 @@ image:
   web:
     tag: "1.11.4"
   sandbox:
-    tag: "1.11.4"
+    tag: "0.2.12"
   pluginDaemon:
-    tag: "1.11.4"
+    tag: "0.5.2-local"
 
 # --- 2. API 組件：多模態與資源限制 ---
 api:
